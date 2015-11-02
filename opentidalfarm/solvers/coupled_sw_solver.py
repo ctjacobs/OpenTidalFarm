@@ -4,6 +4,7 @@ from dolfin import *
 from dolfin_adjoint import *
 
 from solver import Solver
+from les import LES
 from ..problems import SWProblem
 from ..problems import SteadySWProblem
 from ..problems import MultiSteadySWProblem
@@ -51,6 +52,10 @@ class CoupledSWSolverParameters(FrozenClass):
     dolfin_solver = {"newton_solver": {}}
     dump_period = 1
     print_individual_turbine_power = False
+
+    # Large eddy simulation
+    les_model = True
+    les_parameters = {'smagorinsky_coefficient': 0.2}
 
     # If we're printing individual turbine information, the solver needs
     # the helper functional instantiated in the reduced_functional which will live here
@@ -298,6 +303,16 @@ CoupledSWSolverParameters."
         # The normal direction
         n = FacetNormal(self.mesh)
 
+        # Large eddy model
+        include_les = solver_params.les_model
+        if include_les:
+            les_V = FunctionSpace(problem_params.domain.mesh, "CG", 1)
+            les = LES(les_V, u0, solver_params.les_parameters['smagorinsky_coefficient'])
+            eddy_viscosity = les.eddy_viscosity
+            viscosity += eddy_viscosity
+        else:
+            eddy_viscosity = None
+
         # Mass matrix contributions
         M = inner(v, u) * dx
         M += inner(q, h) * dx
@@ -400,7 +415,7 @@ CoupledSWSolverParameters."
             if u_dg:
                 raise NotImplementedError("The viscosity term for \
                     discontinuous elements is not supported.")
-            D_mid = viscosity * inner(2*sym(grad(u_mid)), grad(v)) * dx
+            D_mid = viscosity*inner(grad(u_mid) + grad(u_mid).T, grad(v))*dx - viscosity*(2.0/3.0)*inner(div(u_mid)*Identity(2), grad(v))*dx
 
         # Create the final form
         G_mid = C_mid + Ct_mid + R_mid
@@ -456,6 +471,10 @@ CoupledSWSolverParameters."
 
             # Update source term
             f_u.t = Constant(t_theta)
+
+            if include_les:
+                log(PROGRESS, "Compute eddy viscosity.")
+                les.solve()
 
             # Set the initial guess for the solve
             if cache_forward_state and self.state_cache.has_key(float(t)):
@@ -516,6 +535,7 @@ CoupledSWSolverParameters."
             adj_inc_timestep(time=float(t), finished=self._finished(t,
                 finish_time))
 
+            print "Power at %.2f = %.2f" % (float(t), assemble(1000.0*tf*dot(u_mid, u_mid)**1.5*dx))
 
         # If we're outputting the individual turbine power
         if self.parameters.print_individual_turbine_power:

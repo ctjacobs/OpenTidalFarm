@@ -12,9 +12,10 @@ sigma_eps = 1.3
         
 class KEpsilon(object):
 
-    def __init__(self, V, u, dt):
+    def __init__(self, V, u, dt, mesh):
         self.output = File("eddy_viscosity.pvd")
         self._V = V
+        self.mesh = mesh
         self.k = Function(self._V)
         self.k_old = Function(self._V)
         self.eps = Function(self._V)
@@ -24,9 +25,9 @@ class KEpsilon(object):
         self.u = u
 
         # Initial conditions
-        self.k_old.interpolate(Expression("1.0e-9"))
-        self.eps_old.interpolate(Expression("1.0e-9"))
-        self.eddy_viscosity_old.interpolate(Expression("1.0e-9"))  
+        self.k_old.interpolate(Expression("1.0e-6"))
+        self.eps_old.interpolate(Expression("1.0e-6"))
+        self.eddy_viscosity_old.interpolate(Expression("1.0e-6"))
         
         self.dt = dt
         self.bcs = []#[DirichletBC(self._V, Expression("0.0"), (1,2,3,4))]
@@ -134,32 +135,75 @@ class KEpsilon(object):
         """
         
 #        self.u.assign(u)
+
+        # k solve
         k_lhs, k_rhs = self._k_eqn(u, self.dt, self.k_old, self.eps_old, self.eddy_viscosity_old)
         solve(k_lhs == k_rhs, self.k, bcs=[])
-        #self._k_solver.solve()
         self.k_old.assign(self.k)
 
         nodes = self.k_old.vector()
-        near_zero = numpy.array([1.0e-9 for i in range(len(nodes))])
-        nodes.set_local(numpy.maximum(nodes.array(), near_zero))
-        
+        near_zero = numpy.array([1.0e-6 for i in range(len(nodes))])
+        nodes.set_local(numpy.maximum(nodes.array(), near_zero))        
+        print "k: ", nodes.array(), max(nodes)        
+
+        #v = self.k_old.vector()
+        #values = []
+        #node_min, node_max = v.local_range()
+        #for i in range(0, node_max-node_min):
+        #    if(v[i] < 1.0e-9):
+        #        values.append(1.0e-9)
+        #    else:
+        #        values.append(v[i][0])
+        #v.set_local(numpy.array(values))
+        #v.apply("insert")
+
+        # eps solve
         eps_lhs, eps_rhs = self._eps_eqn(u, self.dt, self.k_old, self.eps_old, self.eddy_viscosity_old)
         solve(eps_lhs == eps_rhs, self.eps, bcs=[])
-        #self._eps_solver.solve()
         self.eps_old.assign(self.eps)
-        
+
         nodes = self.eps_old.vector()
-        near_zero = numpy.array([1.0e-9 for i in range(len(nodes))])
+        near_zero = numpy.array([1.0e-6 for i in range(len(nodes))])
         nodes.set_local(numpy.maximum(nodes.array(), near_zero))
-        
+        print "eps: ", nodes.array(), max(nodes)
+
+        #v = self.eps.vector()
+        #values = []
+        #node_min, node_max = v.local_range()
+        #for i in range(0, node_max-node_min):
+        #    if(v[i] < 1.0e-9):
+        #        values.append(1.0e-9)
+        #    else:
+        #        values.append(v[i][0])
+        #v.set_local(numpy.array(values))
+        #v.apply("insert")
+        #self.eps_old.assign(self.eps)
+
         eddy_viscosity_lhs, eddy_viscosity_rhs = self._eddy_viscosity_eqn(self.k_old, self.eps_old, self.eddy_viscosity_old)
-        #self._eddy_viscosity_solver.solve()
         solve(eddy_viscosity_lhs == eddy_viscosity_rhs, self.eddy_viscosity, bcs=[])
         self.eddy_viscosity_old.assign(self.eddy_viscosity)
-        
+
         nodes = self.eddy_viscosity_old.vector()
-        near_zero = numpy.array([1.0e-9 for i in range(len(nodes))])
+        near_zero = numpy.array([1.0e-6 for i in range(len(nodes))])
         nodes.set_local(numpy.maximum(nodes.array(), near_zero))
-        self.output << self.eddy_viscosity
+
+        print "eddy viscosity: ", nodes.array(), max(nodes)
+
+        #near_zero = numpy.array([1.0e-9 for i in range(len(nodes))])
+        #nodes.set_local(numpy.maximum(nodes.array(), near_zero))
+        #v = self.eddy_viscosity.vector()
+        #values = []
+        #node_min, node_max = v.local_range()
+        #for i in range(0, node_max-node_min):
+        #    if(v[i] < 1.0e-9):
+        #        values.append(1.0e-9)
+        #    else:
+        #        values.append(v[i][0])
+        #print numpy.array(values)
+        #v.set_local(numpy.array(values))
+        #v.apply("insert")
+        #self.eddy_viscosity_old.assign(self.eddy_viscosity)
+
+        self.output << self.eddy_viscosity_old
                 
-        return self.eddy_viscosity
+        return self.eddy_viscosity_old

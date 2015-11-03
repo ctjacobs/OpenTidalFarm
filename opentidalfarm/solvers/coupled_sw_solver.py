@@ -321,8 +321,8 @@ CoupledSWSolverParameters."
         include_keps = solver_params.keps_model
         if include_keps:
             keps_V = FunctionSpace(problem_params.domain.mesh, "CG", 1)
-            keps = KEpsilon(keps_V, u, dt)
-            eddy_viscosity = keps.eddy_viscosity
+            keps = KEpsilon(keps_V, u, dt, problem_params.domain.mesh)
+            eddy_viscosity = keps.eddy_viscosity_old
             viscosity += eddy_viscosity
         else:
             eddy_viscosity = None
@@ -480,16 +480,15 @@ CoupledSWSolverParameters."
             # Update source term
             f_u.t = Constant(t_theta)
 
-
-            print "LOL1"
             if include_les:
                 log(PROGRESS, "Compute eddy viscosity from LES model.")
                 les.solve()
 
             if include_keps:
                 log(PROGRESS, "Compute eddy viscosity from k-epsilon RANS model.")
-                keps.solve(u0)
-            print "LOL2"
+                e = keps.solve(u0)
+                eddy_viscosity.assign(e)
+
             # Set the initial guess for the solve
             if cache_forward_state and self.state_cache.has_key(float(t)):
                 log(INFO, "Read initial guess from cache for t=%f." % t)

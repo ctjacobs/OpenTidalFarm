@@ -462,6 +462,7 @@ CoupledSWSolverParameters."
                   "is_final": self._finished(t, finish_time)}
         solver_params.callback(result)
         yield(result)
+        print "Power at %.2f = %.2f" % (float(t), assemble(1000.0*tf*dot(u_mid, u_mid)**1.5*dx))
 
         log(INFO, "Start of time loop")
         adjointer.time.start(t)

@@ -351,19 +351,12 @@ CoupledSWSolverParameters."
                   bc_contr -= H * dot(u_expr, n) * q * ds(facet_id)
 
             elif bctype == 'flather':
-                # The Flather boundary condition requires two facet_ids.
-                assert len(facet_id) == 2
-
-                # Subtract the divergence integrals again
-                bc_contr -= -H * dot(u_mid, n) * q * ds(facet_id[0])
-                bc_contr -= -H * dot(u_mid, n) * q * ds(facet_id[1])
-
-                # The Flather boundary condition on the left hand side
-                bc_contr -= H * dot(u_expr, n) * q * ds(facet_id[0])
-                Ct_mid += sqrt(g * H) * inner(h_mid, q) * ds(facet_id[0])
-
-                # The contributions of the Flather boundary condition on the right hand side
-                Ct_mid += sqrt(g * H) * inner(h_mid, q) * ds(facet_id[1])
+                # Subtract the divergence integral again
+                bc_contr -= -H * dot(u_mid, n) * q * ds(facet_id)
+ 
+                # The Flather boundary condition
+                #bc_contr -= H * dot(u_expr, n) * q * ds(facet_id)
+                Ct_mid += sqrt(g * H) * inner(h_mid, q) * ds(facet_id) + H * dot(u_expr, n) * q * ds(facet_id)
 
 
         # Pressure gradient term

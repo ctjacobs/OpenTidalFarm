@@ -59,7 +59,7 @@ class CoupledSWSolverParameters(FrozenClass):
     les_parameters = {'smagorinsky_coefficient': 0.2}
 
     # RANS
-    keps_model = False
+    keps_model = True
     
     # If we're printing individual turbine information, the solver needs
     # the helper functional instantiated in the reduced_functional which will live here
@@ -321,7 +321,7 @@ CoupledSWSolverParameters."
         include_keps = solver_params.keps_model
         if include_keps:
             keps_V = FunctionSpace(problem_params.domain.mesh, "CG", 1)
-            keps = KEpsilon(keps_V, u0, dt)
+            keps = KEpsilon(keps_V, u, dt)
             eddy_viscosity = keps.eddy_viscosity
             viscosity += eddy_viscosity
         else:
@@ -480,6 +480,8 @@ CoupledSWSolverParameters."
             # Update source term
             f_u.t = Constant(t_theta)
 
+
+            print "LOL1"
             if include_les:
                 log(PROGRESS, "Compute eddy viscosity from LES model.")
                 les.solve()
@@ -487,7 +489,7 @@ CoupledSWSolverParameters."
             if include_keps:
                 log(PROGRESS, "Compute eddy viscosity from k-epsilon RANS model.")
                 keps.solve(u0)
-                
+            print "LOL2"
             # Set the initial guess for the solve
             if cache_forward_state and self.state_cache.has_key(float(t)):
                 log(INFO, "Read initial guess from cache for t=%f." % t)

@@ -32,6 +32,10 @@ class SWProblemParameters(SteadySWProblemParameters):
     start_time = 0.0
     finish_time = 100.0
 
+    les_model = False
+    les_parameters = {'smagorinsky_coefficient': 0.2}
+    keps_model = False
+
     # Functional time integration parameters
     functional_final_time_only = False
 

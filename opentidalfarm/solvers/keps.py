@@ -50,6 +50,44 @@ class KEpsilon(object):
         
         return
 
+    def streamline_upwind(self, w, keps, u):
+        scaling_factor = 0.5
+        cellsize = CellSize(self.mesh)
+        magnitude = self.magnitude(u)
+
+        u_nodes = magnitude.vector()
+        near_zero = numpy.array([1.0e-9 for i in range(len(u_nodes))])
+        u_nodes.set_local(numpy.maximum(u_nodes.array(), near_zero))
+        
+        grid_pe = self.grid_peclet_number(1.0e-6, magnitude, cellsize)
+
+        # Bound the values for grid_pe below by 1.0e-9 for numerical stability reasons. 
+        grid_pe_nodes = grid_pe.vector()
+        values = numpy.array([1.0e-9 for i in range(len(grid_pe_nodes))])
+        grid_pe_nodes.set_local(numpy.maximum(grid_pe_nodes.array(), values))
+
+        k_bar = ( (1.0/tanh(grid_pe)) - (1.0/grid_pe) ) * cellsize * magnitude
+        F = scaling_factor*(k_bar/(magnitude**2))*inner(dot(grad(w), u), dot(grad(keps), u))*dx
+        return F
+
+    def magnitude(self, u):
+        w = TestFunction(self._V)
+        magnitude = TrialFunction(self._V)
+        solution = Function(self._V)
+        a = w*magnitude*dx
+        L = w*sqrt(dot(u, u))*dx
+        solve(a == L, solution, bcs=[])
+        return solution
+
+    def grid_peclet_number(self, diffusivity, magnitude, cellsize):
+        w = TestFunction(self._V)
+        grid_pe = TrialFunction(self._V)
+        solution = Function(self._V)
+        a = w*grid_pe*dx
+        L = w*(magnitude*cellsize)/(2.0*diffusivity)*dx
+        solve(a == L, solution, bcs=[])
+        return solution
+   
     def _strain_rate_tensor(self, u):
         S = 0.5*(grad(u) + grad(u).T)
         return S
@@ -83,6 +121,8 @@ class KEpsilon(object):
 
         # The full weak form of the equation for k
         F_k = M_k + A_k - D_k - P_k - ABS_k
+        
+        F_k += self.streamline_upwind(w, k, u)
 
         return lhs(F_k), rhs(F_k)
         
@@ -115,7 +155,9 @@ class KEpsilon(object):
 
         # The full weak form of the equation for epsilon
         F_eps = M_eps + A_eps - D_eps - P_eps - ABS_eps
-      
+        
+        F_eps += self.streamline_upwind(w, eps, u)
+        
         return lhs(F_eps), rhs(F_eps)
      
     def _eddy_viscosity_eqn(self, k_old, eps_old, eddy_viscosity_old):

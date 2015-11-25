@@ -55,12 +55,12 @@ class CoupledSWSolverParameters(FrozenClass):
     print_individual_turbine_power = False
 
     # Large eddy simulation
-    les_model = False
+    les_model = True
     les_parameters = {'smagorinsky_coefficient': 0.2}
 
     # RANS
-    keps_model = True
-    
+    keps_model = False
+
     # If we're printing individual turbine information, the solver needs
     # the helper functional instantiated in the reduced_functional which will live here
     output_writer = None
@@ -318,14 +318,14 @@ CoupledSWSolverParameters."
             eddy_viscosity = None
 
         # k-eps RANS model
-        include_keps = solver_params.keps_model
-        if include_keps:
-            keps_V = FunctionSpace(problem_params.domain.mesh, "CG", 1)
-            keps = KEpsilon(keps_V, u, dt, problem_params.domain.mesh)
-            eddy_viscosity = keps.eddy_viscosity_old
-            viscosity += eddy_viscosity
-        else:
-            eddy_viscosity = None
+        #include_keps = solver_params.keps_model
+        #if include_keps:
+        #    keps_V = FunctionSpace(problem_params.domain.mesh, "CG", 1)
+        #    keps = KEpsilon(keps_V, u, dt, problem_params.domain.mesh)
+        #    eddy_viscosity = keps.eddy_viscosity_old
+        #    viscosity += eddy_viscosity
+        #else:
+        #    eddy_viscosity = None
             
         # Mass matrix contributions
         M = inner(v, u) * dx
@@ -422,7 +422,8 @@ CoupledSWSolverParameters."
             if u_dg:
                 raise NotImplementedError("The viscosity term for \
                     discontinuous elements is not supported.")
-            D_mid = viscosity*inner(grad(u_mid) + grad(u_mid).T, grad(v))*dx - viscosity*(2.0/3.0)*inner(div(u_mid)*Identity(2), grad(v))*dx
+            
+            D_mid = viscosity * inner(2*sym(grad(u_mid)), grad(v)) * dx #viscosity*inner(grad(u_mid) + grad(u_mid).T, grad(v))*dx - viscosity*(2.0/3.0)*inner(div(u_mid)*Identity(2), grad(v))*dx
 
         # Create the final form
         G_mid = C_mid + Ct_mid + R_mid

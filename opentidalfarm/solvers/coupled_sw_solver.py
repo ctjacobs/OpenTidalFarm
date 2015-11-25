@@ -55,7 +55,7 @@ class CoupledSWSolverParameters(FrozenClass):
     print_individual_turbine_power = False
 
     # Large eddy simulation
-    les_model = True
+    les_model = False
     les_parameters = {'smagorinsky_coefficient': 0.2}
 
     # RANS
@@ -485,10 +485,10 @@ CoupledSWSolverParameters."
                 log(PROGRESS, "Compute eddy viscosity from LES model.")
                 les.solve()
 
-            if include_keps:
-                log(PROGRESS, "Compute eddy viscosity from k-epsilon RANS model.")
-                e = keps.solve(u0)
-                eddy_viscosity.assign(e)
+            #if include_keps:
+            #    log(PROGRESS, "Compute eddy viscosity from k-epsilon RANS model.")
+            #    e = keps.solve(u0)
+            #    eddy_viscosity.assign(e)
 
             # Set the initial guess for the solve
             if cache_forward_state and self.state_cache.has_key(float(t)):

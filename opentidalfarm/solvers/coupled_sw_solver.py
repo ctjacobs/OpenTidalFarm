@@ -423,7 +423,8 @@ CoupledSWSolverParameters."
                 raise NotImplementedError("The viscosity term for \
                     discontinuous elements is not supported.")
             
-            D_mid = viscosity * inner(2*sym(grad(u_mid)), grad(v)) * dx #viscosity*inner(grad(u_mid) + grad(u_mid).T, grad(v))*dx - viscosity*(2.0/3.0)*inner(div(u_mid)*Identity(2), grad(v))*dx
+            #D_mid = viscosity*inner(grad(u_mid) + grad(u_mid).T, grad(v))*dx - viscosity*(2.0/3.0)*inner(div(u_mid)*Identity(2), grad(v))*dx
+            D_mid = viscosity * inner(2*sym(grad(u_mid)), grad(v)) * dx
 
         # Create the final form
         G_mid = C_mid + Ct_mid + R_mid
